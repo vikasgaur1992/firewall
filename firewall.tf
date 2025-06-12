@@ -77,12 +77,18 @@ resource "aws_security_group" "mgmt" {
   }
 }
 
+resource "aws_internet_gateway" "igw" {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = "main-igw" }
+}
+
 module "fw" {
   source  = "PaloAltoNetworks/swfw-modules/aws//modules/vmseries"
   version = "2.0.0"
   name           = "vm300-fw"
   instance_type  = "m5.xlarge"
   ssh_key_name   = var.ssh_key
+  vmseries_ami_id      = "ami-0000246c645ec5f05"  # <<-- Add this line
 
 interfaces = {
   mgmt = {
@@ -101,5 +107,11 @@ interfaces = {
   }
 }
 
-  bootstrap_options = jsonencode(var.bootstrap_userdata)
+#  bootstrap_options = jsonencode(var.bootstrap_userdata)
+bootstrap_options = <<-EOF
+    hostname=vm-fw
+    mgmt-interface-swap=enable
+    dhcp-accept-server-hostname=no
+    dhcp-accept-server-domain=no
+  EOF
 }
