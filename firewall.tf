@@ -88,7 +88,7 @@ module "fw" {
   name           = "vm300-fw"
   instance_type  = "m5.xlarge"
   ssh_key_name   = var.ssh_key
-  vmseries_ami_id      = "ami-0000246c645ec5f05"  # <<-- Add this line
+  vmseries_ami_id      = "ami-097a8a37770dc20f6"  # <<-- Add this line
 
 interfaces = {
   mgmt = {
@@ -102,16 +102,42 @@ interfaces = {
     device_index       = 1
     subnet_id          = aws_subnet.dp.id
     create_public_ip   = false
-    source_dest_check  = true
+    source_dest_check  = false
     security_group_ids = []
   }
 }
 
 #  bootstrap_options = jsonencode(var.bootstrap_userdata)
-bootstrap_options = <<-EOF
-    hostname=vm-fw
-    mgmt-interface-swap=enable
-    dhcp-accept-server-hostname=no
-    dhcp-accept-server-domain=no
-  EOF
+bootstrap_options = ""
+#<<-EOF
+#    hostname=vm-fw
+#    mgmt-interface-swap=enable
+#    dhcp-accept-server-hostname=no
+#    dhcp-accept-server-domain=no
+#  EOF
+}
+
+
+# Create a public route table
+resource "aws_route_table" "public_rt" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.igw.id
+  }
+
+  tags = {
+    Name = "public-route-table"
+  }
+}
+
+# Associate the route table with the mgmt subnet
+resource "aws_route_table_association" "mgmt_rt_assoc" {
+  subnet_id      = aws_subnet.mgmt.id
+  route_table_id = aws_route_table.public_rt.id
+}
+resource "aws_route_table_association" "dp_rt_assoc" {
+  subnet_id      = aws_subnet.dp.id
+  route_table_id = aws_route_table.public_rt.id
 }
